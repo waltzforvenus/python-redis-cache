@@ -230,9 +230,15 @@ class CacheDecorator:
             if result:
                 parsed_result = self.deserializer(result)
             elif not exception_handled:
-                parsed_result = fn(*args, **kwargs)
-                result_serialized = self.serializer(parsed_result)
-                get_cache_lua_fn(self.client)(keys=[key, self.keys_key], args=[result_serialized, self.ttl, self.limit])
+                try:
+                    parsed_result = fn(*args, **kwargs)
+                    result_serialized = self.serializer(parsed_result)
+                    get_cache_lua_fn(self.client)(keys=[key, self.keys_key], args=[result_serialized, self.ttl, self.limit])
+                except Exception as e:
+                    if self.exception_handler:
+                        parsed_result = self.exception_handler(e, self.original_fn, args, kwargs)
+                    else:
+                        raise e
 
             return parsed_result
 
